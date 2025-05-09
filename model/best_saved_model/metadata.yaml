@@ -1,0 +1,49 @@
+description: Ultralytics YOLO11n model trained on data.yaml
+author: Ultralytics
+date: '2025-05-03T14:29:04.930773'
+version: 8.3.124
+license: AGPL-3.0 License (https://ultralytics.com/license)
+docs: https://docs.ultralytics.com
+stride: 32
+task: detect
+batch: 1
+imgsz:
+- 640
+- 640
+names:
+  0: haverdrink ah terra
+  1: haverdrink alpro
+  2: haverdrink ekoplaza
+  3: haverdrink natrue
+  4: haverdrink oatly
+  5: haverdrink rude health
+  6: koffie cafe gondoliere
+  7: koffie douwe egberts
+  8: koffie ekoplaza
+  9: koffie fairtrade original
+  10: koffie kanis gunnink
+  11: koffie perla bio
+  12: pasta ah bio
+  13: pasta de cecco
+  14: pasta grand italia
+  15: pasta la bio idea
+  16: pasta la molisana
+  17: pasta rummo
+  18: pastasaus ah bio
+  19: pastasaus ekoplaza
+  20: pastasaus fertilia
+  21: pastasaus heinz
+  22: pastasaus jumbo
+  23: pastasaus spagheroni
+  24: pindakaas ah bio
+  25: pindakaas calve
+  26: pindakaas jumbo
+  27: pindakaas luna e terra
+  28: pindakaas skippy
+  29: pindakaas whole earth
+args:
+  batch: 1
+  half: false
+  int8: false
+  nms: false
+channels: 3
