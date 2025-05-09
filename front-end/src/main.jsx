@@ -6,6 +6,6 @@ import NutriScore from './QueryDatabase.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <NutriScore />
+    <App />
   </StrictMode>,
 )
