@@ -17,11 +17,10 @@ function App() {
   const [diminishType, setDiminishType] = useState(0);   // 0 = overlay, 1 = Blur, 2 = Desaturate
   const [nutriScoreBaseline, setNutriScoreBaseline] = useState(0);
 
+  const API_URL = get_API_address(2);
 
   const detect = useCallback(async () => {
     if (!webcamRef.current) return;
-
-    const API_URL = get_API_address(2);
 
     try {
       const imageSrc = webcamRef.current.getScreenshot();
@@ -64,7 +63,7 @@ function App() {
 
 
   useEffect(() => {
-    const interval = setInterval(detect, 1000);
+    const interval = setInterval(detect, 150);
     return () => clearInterval(interval);
   },  [diminishMethod, diminishType, useOutline, nutriScoreBaseline]);
 

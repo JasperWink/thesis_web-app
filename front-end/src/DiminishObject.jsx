@@ -42,20 +42,60 @@ const getDiminishStrength = (nutri_score, effectType) => {
 };
 
 const applyOverlay = (bbox, ctx, opacity) => {
+    if (opacity <= 0) return
+
+    const [x, y, w, h] = bbox;
+    // PREVIOUS IMPLEMENTATION
+    // ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
+    // ctx.fillRect(x, y, w, h);
+
+    ctx.save();
+    ctx.globalAlpha = opacity;
+    ctx.fillStyle = 'white';
+    ctx.fillRect(x, y, w, h);
+    ctx.restore();
+};
+
+const applyBlur = (bbox, ctx, video, diminish_strength) => {
+    if (diminish_strength <= 0) return;
+    
     const [x, y, w, h] = bbox;
 
-    if (opacity > 0) {
-        ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`;
-        ctx.fillRect(x, y, w, h);
-    }
+    // Use hardware-accelerated filter for blur
+    ctx.save();
+    
+    // Create a clipping path for the bounding box
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.clip();
+    
+    // Apply blur only to the clipped region
+    ctx.filter = `blur(${diminish_strength}px)`;
+    
+    // Draw the video content into this region with the blur effect
+    ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight, 
+                  0, 0, ctx.canvas.width, ctx.canvas.height);
+    
+    // Reset filter
+    ctx.filter = 'none';
+    ctx.restore();
 };
 
-const applyBlur = (scaled_bbox, ctx, video, diminish_strength) => {
-
-};
-
-const applyDesaturation = (scaled_bbox, ctx, video, diminish_strength) => {
-
+const applyDesaturation = (bbox, ctx, video, diminish_strength) => {
+    const [x, y, w, h] = bbox;
+    
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, w, h);
+    ctx.clip();
+    
+    // Apply grayscale via compositing (no pixel loops)
+    ctx.globalCompositeOperation = 'saturation';
+    ctx.globalAlpha = diminish_strength;
+    ctx.fillStyle = 'black';
+    ctx.fillRect(x, y, w, h);
+    
+    ctx.restore();
 };
 
 const applyOutline = (bbox, ctx, det) => {
@@ -76,8 +116,6 @@ const applyOutline = (bbox, ctx, det) => {
 
 export const diminishObject = (canvas, video, detections, diminishMethod,
                                diminishType, useOutline, nutriScoreBaseline) => {
-    if (!canvas || !video) return;
-
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
