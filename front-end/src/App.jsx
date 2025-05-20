@@ -18,6 +18,7 @@ function App() {
   const [nutriScoreBaseline, setNutriScoreBaseline] = useState(0);
 
   const API_URL = get_API_address(2);
+  // const API_URL = '/api/detect';
 
   const detect = useCallback(async () => {
     if (!webcamRef.current) return;
@@ -63,7 +64,7 @@ function App() {
 
 
   useEffect(() => {
-    const interval = setInterval(detect, 150);
+    const interval = setInterval(detect, 1000);
     return () => clearInterval(interval);
   },  [diminishMethod, diminishType, useOutline, nutriScoreBaseline]);
 
