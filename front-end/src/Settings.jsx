@@ -3,9 +3,11 @@ import './Settings.css';
 
 export default function SettingsPanel({ isOpen, onClose,
                                         diminishMethod, setDiminishMethod,
-                                        diminishType, setDiminishType,
+                                        diminishEffect, setDiminishEffect,
+                                        nutriScoreBaseline, setNutriScoreBaseline,
                                         useOutline, setUseOutline,
-                                        nutriScoreBaseline, setNutriScoreBaseline }) {
+                                        outlineColor, setOutlineColor
+                                        }) {
   return (
     <div className={`settings-panel ${isOpen ? 'open' : ''}`}>
         <div className="settings-header">
@@ -32,13 +34,29 @@ export default function SettingsPanel({ isOpen, onClose,
             <label className="setting-label">Diminish effect: </label>
             <select
                 className="setting-select"
-                value={diminishType} 
-                onChange={(e) => setDiminishType(Number(e.target.value))}
+                value={diminishEffect} 
+                onChange={(e) => setDiminishEffect(Number(e.target.value))}
             >
                 <option value={0}>None</option>
                 <option value={1}>Overlay</option>
                 <option value={2}>Blur</option>
                 <option value={3}>Desaturate</option>
+            </select>
+            </div>
+
+            {/* ---------------- Nutri-score baseline ------------------- */}
+            <div className="setting-option">
+            <label className="setting-label">Nutri-score baseline: </label>
+            <select
+                className="setting-select"
+                value={nutriScoreBaseline} 
+                onChange={(e) => setNutriScoreBaseline(Number(e.target.value))}
+            >
+                <option value={0}>A</option>
+                <option value={1}>B</option>
+                <option value={2}>C</option>
+                <option value={3}>D</option>
+                <option value={4}>E</option>
             </select>
             </div>
 
@@ -58,17 +76,15 @@ export default function SettingsPanel({ isOpen, onClose,
 
             {/* ---------------- Nutri-score baseline ------------------- */}
             <div className="setting-option">
-            <label className="setting-label">Nutri-score baseline: </label>
+            <label className="setting-label">Outline color: </label>
             <select
                 className="setting-select"
-                value={nutriScoreBaseline} 
-                onChange={(e) => setNutriScoreBaseline(Number(e.target.value))}
+                value={outlineColor} 
+                onChange={(e) => setOutlineColor(e.target.value)}
             >
-                <option value={0}>A</option>
-                <option value={1}>B</option>
-                <option value={2}>C</option>
-                <option value={3}>D</option>
-                <option value={4}>E</option>
+                <option value={'gray'}>Gray</option>
+                <option value={'green'}>Green</option>
+                <option value={'red'}>Red</option>
             </select>
             </div>
         </div>

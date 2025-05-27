@@ -6,8 +6,9 @@ from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)
-model = YOLO("yolov11m.pt")
-# model.to("cuda")
+model = YOLO("models/yolov11l_640px.pt")
+model.to("cuda")
+
 
 # Nutri-score convertion
 # A = 0
@@ -58,7 +59,7 @@ NUTRISCORE_DICT = {
 }
 
 
-@app.route('/', methods=['POST'])
+@app.route('/detect', methods=['POST'])
 def detect():
     if 'image' not in request.files:
         return jsonify({"error": "No image provided"}), 400
@@ -69,7 +70,7 @@ def detect():
     img = cv2.imdecode(npimg, cv2.IMREAD_COLOR)
 
     # Run object detection model
-    results = model(img)
+    results = model(img) #, verbose=False)
 
     # Process results
     detections = []
@@ -83,7 +84,7 @@ def detect():
             detections.append({
                 "class": class_name,
                 "confidence": confidence,
-                "nutri_score": NUTRISCORE_DICT[class_name],
+                "nutri_score": NUTRISCORE_DICT.get(class_name, "Unknown"),
                 "bbox": [x1, y1, x2 - x1, y2 - y1]  # x, y, width, height
             })
 

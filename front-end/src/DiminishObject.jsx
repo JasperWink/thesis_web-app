@@ -21,7 +21,7 @@ const getDiminishStrength = (nutri_score, effectType) => {
     const EFFECT_STRENGTH_MAP = {
         [DIMINISH_EFFECT.NONE]:        [0, 0, 0, 0, 0],
         [DIMINISH_EFFECT.OVERLAY]:     [0, 0.3, 0.5, 0.7, 0.9],
-        [DIMINISH_EFFECT.BLUR]:        [0, 5, 10, 15, 20],
+        [DIMINISH_EFFECT.BLUR]:        [0, 1, 5, 10, 20],
         [DIMINISH_EFFECT.DESATURATE]:  [0, 0.3, 0.6, 0.8, 1]
     };
     return EFFECT_STRENGTH_MAP[effectType][nutri_score];
@@ -43,14 +43,15 @@ const applyBlur = (bbox, ctx, video, blurStrength) => {
     if (blurStrength <= 0) return;
 
     const [x, y, w, h] = bbox;
-    // Use hardware-accelerated filter for blur
+
+    // Target only the section of the canvas in the bbox.
     ctx.save();
     ctx.beginPath();
     ctx.rect(x, y, w, h);
     ctx.clip();
-    ctx.filter = `blur(${blurStrength}px)`;
 
     // Draw the blur
+    ctx.filter = `blur(${blurStrength}px)`;
     ctx.drawImage(video, 0, 0, video.videoWidth, video.videoHeight, 
                   0, 0, ctx.canvas.width, ctx.canvas.height);
     
@@ -62,22 +63,22 @@ const applyDesaturation = (bbox, ctx, video, desaturationStrength) => {
 
     const [x, y, w, h] = bbox;
 
+    // Target only the section of the canvas in the bbox.
     ctx.save();
     ctx.beginPath();
     ctx.rect(x, y, w, h);
     ctx.clip();
-    
-    ctx.globalCompositeOperation = 'saturation';
-    ctx.globalAlpha = desaturationStrength;
-    ctx.fillStyle = 'black';
-    ctx.fillRect(x, y, w, h);
+
+    // Draw the desaturate effect.
+    ctx.filter = `saturate(${1 - desaturationStrength})`;
+    ctx.drawImage(video, x, y, w, h, x, y, w, h);
     
     ctx.restore();
 };
 
-const applyOutline = (bbox, ctx, det) => {
+const applyOutline = (bbox, ctx, det, outlineColor) => {
     const [x, y, w, h] = bbox;
-    ctx.strokeStyle = 'red';
+    ctx.strokeStyle = outlineColor;
     ctx.lineWidth = 2;
     ctx.strokeRect(x, y, w, h);
 
@@ -92,7 +93,8 @@ const applyOutline = (bbox, ctx, det) => {
 };
 
 export const diminishObject = (canvas, video, detections, diminishMethod,
-                               diminishType, useOutline, nutriScoreBaseline) => {
+                               diminishType, nutriScoreBaseline, useOutline,
+                               outlineColor) => {
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -106,7 +108,7 @@ export const diminishObject = (canvas, video, detections, diminishMethod,
 
         // Set outline on healthy products, nutri-score of A or above baseline.
         if (useOutline == OUTLINE.HEALTHY && nutri_score == 0) {
-            applyOutline(det.bbox, ctx, det);
+            applyOutline(det.bbox, ctx, det, outlineColor);
         }
 
         const diminish_strength = getDiminishStrength(nutri_score, diminishType);
@@ -125,7 +127,7 @@ export const diminishObject = (canvas, video, detections, diminishMethod,
                 break;
         }
         if (useOutline == OUTLINE.ALL) {
-            applyOutline(det.bbox, ctx, det);
+            applyOutline(det.bbox, ctx, det, outlineColor);
         }
     });
 };

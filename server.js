@@ -2,75 +2,45 @@ const express = require('express');
 const https = require('https');
 const fs = require('fs');
 const path = require('path');
+const { createProxyMiddleware } = require('http-proxy-middleware');
 
 const app = express();
 const port = 8094;
 
-// Path to your build folder - update this path to where your build is located
-const buildPath = 'build';
+// Path to your build folder
+const buildPath = path.join(__dirname, 'front-end/dist');
 
-// SSL certificate paths - update these with your actual certificate paths
+// SSL certificate paths
 const options = {
-  key: fs.readFileSync('mykey.key'),
-  cert: fs.readFileSync('mycert.pem')
+  key: fs.readFileSync(path.resolve(__dirname, 'certs/chimay.science.uva.nl.key')),
+  cert: fs.readFileSync(path.resolve(__dirname, 'certs/chimay_science_uva_nl.pem'))
 };
 
 // Serve static files
 app.use(express.static(buildPath));
+
+// Set up proxy for API requests
+app.use('/api', createProxyMiddleware({
+  target: 'http://145.100.134.14:8094',
+  changeOrigin: true,
+  pathRewrite: {'^/api': ''}
+}));
 
 // For SPA routing - serve index.html for any unmatched routes
 app.get(/(.*)/, (req, res) => {
   res.sendFile(path.join(buildPath, 'index.html'));
 });
 
+// Create HTTPS server with proper error handling
+const server = https.createServer(options, app);
+
 // Create HTTPS server
 https.createServer(options, app).listen(port, () => {
-  console.log(`Server running at https://localhost:${port}`);
+  console.log(`Server running at https://chimay.science.uva.nl:${port}`);
   console.log(`Serving content from: ${buildPath}`);
 });
 
-
-// // ----------------- ROB -----------------
-// const express = require('express');
-// const cors = require('cors');
-// const https = require('https');
-// const fs = require('fs');
-// const app = express();
-
-// require('dotenv').config();
-
-// const HOST = process.env.REACT_APP_PROXY_HOST || 'localhost'; // host for proxy server, default to localhost
-// const PORT = process.env.REACT_APP_PROXY_PORT || 3002; // port for proxy server, default to 3002
-// const USE_SSL = process.env.USE_SSL === 'true'; // Check if SSL should be enabled
-
-// app.use(cors({
-//   origin: '*', // TODO: Replace '*' with specific frontend domain in production
-// }));
-
-// // DEBUG:
-// app.use((req, res, next) => {
-//   console.log(`Request for: ${req.url}`);
-//   next();
-// });
-
-// // app.use(express.static('./src/dataset'));
-// app.use(express.static('./src/dataset', { fallthrough: false }));
-
-
-// if (USE_SSL) {
-//   // Load SSL certificate and private key
-//   const sslOptions = {
-//     key: fs.readFileSync('./certs/key.pem'), // Path to private key
-//     cert: fs.readFileSync('./certs/cert.pem'), // Path to certificate
-//   };
-
-//   // Create HTTPS server
-//   https.createServer(sslOptions, app).listen(PORT, HOST, () => {
-//     console.log(`Proxy server listening on https://${HOST}:${PORT}`);
-//   });
-// } else {
-//   // Create HTTP server
-//   app.listen(PORT, HOST, () => {
-//     console.log(`Proxy server listening on http://${HOST}:${PORT}`);
-//   });
-// }
+// Handle server errors
+server.on('error', (error) => {
+  console.error('Server error:', error);
+});
