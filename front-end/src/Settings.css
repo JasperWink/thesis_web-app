@@ -36,12 +36,10 @@
   cursor: pointer;
 }
 
-/* Settings container */
 .settings-content {
   padding: 20px;
 }
 
-/* Each setting row */
 .setting-option {
   display: flex;
   align-items: center;
@@ -49,7 +47,6 @@
   width: 100%;
 }
 
-/* Label styling */
 .setting-label {
   font-size: 4vh;
   width: 50%;
@@ -58,7 +55,6 @@
   font-family: sans-serif;
 }
 
-/* Select box styling */
 .setting-select {
   font-size: 4vh;
   width: 50%;

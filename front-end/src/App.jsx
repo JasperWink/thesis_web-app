@@ -1,24 +1,32 @@
 import React, { useRef, useEffect, useState, useCallback } from "react";
 import { GoGear } from "react-icons/go";
+import { MdFullscreen, MdFullscreenExit } from "react-icons/md";
 import Webcam from "react-webcam";
 import Settings from "./Settings";
 import { diminishObject } from './DiminishObject';
+// import { get_API_address } from './API_addresses';
 import "./App.css";
-import { get_API_address } from './API_addresses';
+
 
 function App() {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
+  const containerRef = useRef(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [screenDimentions, setScreenDimentions] = useState({
+    width: undefined, 
+    height: undefined
+  });
 
   // Settings values
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [useOutline, setUseOutline] = useState(true);
+  const [useOutline, setUseOutline] = useState(0); // 0 = Off, 1 = Healthy, 2 = All
   const [diminishMethod, setDiminishMethod] = useState(0);   // 0 = Threshold, 1 = Dynamic
   const [diminishType, setDiminishType] = useState(0);   // 0 = overlay, 1 = Blur, 2 = Desaturate
   const [nutriScoreBaseline, setNutriScoreBaseline] = useState(0);
 
-  const API_URL = get_API_address(2);
-  // const API_URL = '/api/detect';
+  // const API_URL = get_API_address(2);
+  const API_URL = '/api/detect';
 
   const detect = useCallback(async () => {
     if (!webcamRef.current) return;
@@ -52,6 +60,21 @@ function App() {
   }, [diminishMethod, diminishType, useOutline, nutriScoreBaseline]);
 
 
+  // Toggle fullscreen function (simplified)
+  const toggleFullscreen = useCallback(() => {
+    if (!containerRef.current) return;
+
+    if (!document.fullscreenElement) {
+      containerRef.current.requestFullscreen()
+        .then(() => setIsFullscreen(true))
+        .catch(err => console.error('Fullscreen error:', err));
+    } else {
+      document.exitFullscreen()
+        .then(() => setIsFullscreen(false));
+    }
+  }, []);
+
+
   // Initialize canvas when video loads
   const handleVideoLoad = () => {
     const video = webcamRef.current.video;
@@ -62,30 +85,65 @@ function App() {
     }
   };
 
+  // Initialize canvas when video loads
+  // const resizeHandler = () => {
+  //   const video = webcamRef.current.video;
+  //   const canvas = canvasRef.current;
+  //   if (video && canvas) {
+  //     canvas.width = screenDimentions.width;
+  //     canvas.height = screenDimentions.height;
 
+  //     video.width = screenDimentions.width;
+  //     video.height = screenDimentions.height;
+  //   }
+  // };
+
+  // // Handle a change in windowsize.
+  // useEffect(() => {
+  //   const resizeHandler = () => setScreenDimentions([window.innerWidth, window.innerHeight]);
+  //   document.addEventListener('resize', resizeHandler);
+  //   return () => document.removeEventListener('resize', resizeHandler);
+  // }, []);
+
+  // Handle fullscreen.
   useEffect(() => {
-    const interval = setInterval(detect, 1000);
+    const fullscreenHandler = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', fullscreenHandler);
+    return () => document.removeEventListener('fullscreenchange', fullscreenHandler);
+  }, []);
+
+  // Detect the objects on the screen every interval.
+  useEffect(() => {
+    const interval = setInterval(detect, 200);
     return () => clearInterval(interval);
   },  [diminishMethod, diminishType, useOutline, nutriScoreBaseline]);
 
 
   return (
-    <div className="container">
+    <div className="container" ref={containerRef}>
       <Webcam
         className="webcam-component"
         ref={webcamRef}
+        // width={screenDimentions.width}
+        // height={screenDimentions.height}
         onLoadedMetadata={handleVideoLoad}
-        audio={false}
         screenshotFormat="image/jpeg"
         videoConstraints={{
           facingMode: "environment",
         }}
       />
       <canvas className="canvas-overlay" ref={canvasRef}/>
-      <GoGear
-        className="gear-icon"
-        onClick={() => setSettingsOpen(!settingsOpen)}
-      />
+
+        <GoGear
+          className="gear-icon"
+          onClick={() => setSettingsOpen(!settingsOpen)}
+        />
+        {isFullscreen ? (
+          <MdFullscreenExit className="control-icon" onClick={toggleFullscreen} />
+        ) : (
+          <MdFullscreen className="control-icon" onClick={toggleFullscreen} />
+        )}
+
       <Settings
         isOpen={settingsOpen}
         onClose={() => setSettingsOpen(false)}

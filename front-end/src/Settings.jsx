@@ -15,7 +15,7 @@ export default function SettingsPanel({ isOpen, onClose,
         <div className="settings-content">
             {/* ---------------- Diminish Method ------------------- */}
             <div className="setting-option">
-            <label className="setting-label">Diminish Method: </label>
+            <label className="setting-label">Diminish method: </label>
             
             <select
                 className="setting-select"
@@ -29,7 +29,7 @@ export default function SettingsPanel({ isOpen, onClose,
 
             {/* ---------------- Diminish Type ------------------- */}
             <div className="setting-option">
-            <label className="setting-label">Diminish Type: </label>
+            <label className="setting-label">Diminish effect: </label>
             <select
                 className="setting-select"
                 value={diminishType} 
@@ -44,14 +44,15 @@ export default function SettingsPanel({ isOpen, onClose,
 
             {/* ---------------- Apply outline ------------------- */}
             <div className="setting-option">
-            <label className="setting-label">Apply outline: </label>
+            <label className="setting-label">Outline: </label>
             <select
                 className="setting-select"
                 value={useOutline}
-                onChange={(e) => setUseOutline(e.target.value === 'true')}
+                onChange={(e) => setUseOutline(Number(e.target.value))}
             >
-                <option value={true}>True</option>
-                <option value={false}>False</option>
+                <option value={0}>Off</option>
+                <option value={1}>Healthy products</option>
+                <option value={2}>All products</option>
             </select>
             </div>
 

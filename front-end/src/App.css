@@ -37,3 +37,16 @@
   pointer-events: auto;
   cursor: pointer;
 }
+
+
+.control-icon {
+  font-size: 10vw;
+  position: fixed;
+  z-index: 100;
+  top: 20px;
+  left: 20px;
+  color: gray;
+  padding: 10px;
+  pointer-events: auto;
+  cursor: pointer;
+}
