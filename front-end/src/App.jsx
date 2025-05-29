@@ -4,6 +4,7 @@ import { MdFullscreen, MdFullscreenExit } from "react-icons/md";
 import Webcam from "react-webcam";
 import Settings from "./Settings";
 import { diminishObject } from './DiminishObject';
+import { io } from 'socket.io-client';
 import "./App.css";
 
 
@@ -11,7 +12,14 @@ function App() {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
+  const socketRef = useRef(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [rtt, setRtt] = useState(0);
+  const pendingRequests = useRef(new Map());
+
+  const rttArray = useRef([]);
+  const MAX_RTT_RECORDS = 1000; 
+
 
   // Settings values
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -20,8 +28,6 @@ function App() {
   const [nutriScoreBaseline, setNutriScoreBaseline] = useState(0);
   const [useOutline, setUseOutline] = useState(0); // 0 = Off, 1 = Healthy, 2 = All
   const [outlineColor, setOutlineColor] = useState('gray');
-
-  const API_URL = '/api/detect';
 
   const settingsRef = useRef({
     diminishMethod,
@@ -32,35 +38,22 @@ function App() {
   });
 
   const detect = useCallback(async () => {
-    if (!webcamRef.current) return;
+    if (!webcamRef.current || !socketRef.current?.connected) return;
 
     try {
       const imageSrc = webcamRef.current.getScreenshot();
       if (!imageSrc) return;
 
-      // Create the blob from the screenshot.
-      const blob = await fetch(imageSrc).then(res => res.blob());
-      const formData = new FormData();
-      formData.append('image', blob, 'frame.jpg');
+      // Generate unique request ID and record start time
+      const requestId = Date.now() + Math.random();
+      const startTime = performance.now();
+      pendingRequests.current.set(requestId, startTime);
 
-      // Send the screenshot to the server.
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        body: formData
+      // Send the base64 image data through WebSocket
+      socketRef.current.emit('detect_frame', {
+        image: imageSrc,
+        requestId: requestId
       });
-
-      // Receive the response and diminish.
-      const detections = await response.json();
-      diminishObject(
-        canvasRef.current,
-        webcamRef.current.video,
-        detections,
-        settingsRef.current.diminishMethod,
-        settingsRef.current.diminishEffect,
-        settingsRef.current.nutriScoreBaseline,
-        settingsRef.current.useOutline,
-        settingsRef.current.outlineColor
-      );
 
     } catch (error) {
       console.error('Detection error:', error);
@@ -93,6 +86,66 @@ function App() {
       canvas.height = video.videoHeight;
     }
   };
+
+  // Initialize WebSocket connection
+  useEffect(() => {
+    // Connect to the WebSocket server through the proxy
+    socketRef.current = io('/', {
+      path: '/socket.io',
+      transports: ['websocket', 'polling']
+    });
+
+    socketRef.current.on('status', (data) => {
+      console.log('Server status:', data.msg);
+    });
+
+    socketRef.current.on('detection_result', (data) => {
+      const endTime = performance.now();
+      const requestId = data.requestId;
+
+      // Calculate RTT if we have the start time
+      if (requestId && pendingRequests.current.has(requestId)) {
+        const startTime = pendingRequests.current.get(requestId);
+        const currentRtt = endTime - startTime;
+        setRtt(currentRtt);
+        console.log(`RTT: ${currentRtt.toFixed(2)}ms`);
+        pendingRequests.current.delete(requestId);
+
+        // -------------- DIT IS OM DE RTT TE METEN -----------
+        // if (rttArray.current.length < MAX_RTT_RECORDS) {
+        //   console.log("push")
+        //   rttArray.current.push(currentRtt);
+        // }
+        // else {
+        //   console.log(rttArray);
+        // }
+      }
+
+      // Process the detection results
+      if (canvasRef.current && webcamRef.current?.video) {
+        diminishObject(
+          canvasRef.current,
+          webcamRef.current.video,
+          data.detections,
+          settingsRef.current.diminishMethod,
+          settingsRef.current.diminishEffect,
+          settingsRef.current.nutriScoreBaseline,
+          settingsRef.current.useOutline,
+          settingsRef.current.outlineColor
+        );
+      }
+    });
+
+    socketRef.current.on('detection_error', (error) => {
+      console.error('Detection error:', error);
+    });
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+    };
+  }, []);
 
   // Handle fullscreen.
   useEffect(() => {
