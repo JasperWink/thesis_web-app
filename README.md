@@ -1,11 +1,17 @@
-## Diminished reality thesis
+# Diminished reality thesis
+Name: Jasper Wink
+UvA ID: 14616513
+
+This repository contains the source code for the diminished reality web application for the phone.
 
 
-## Deployment
-# Back-end
-1. Deploy the back-end files on a device that has access to an NVIDIA GPU. If you don't have access to one, remove the line: "model.to("cuda")". Now the YOLO model will run on the CPU (Which is slower). 
+# Deployment
+The following steps help you deploy the web application.
 
-2. Create and run a virtual enviorenement using:
+## Back-end
+1. Deploy the back-end files on a device that has access to an NVIDIA GPU. If you don't have access to one, remove the line: "model.to("cuda")" from the file "back-end.py". Now the YOLO model will run on the CPU (Which is slower). 
+
+2. Create and run a virtual environment using:
 ```
 Linux / MacOS:
 python3 -m venv venv
@@ -26,18 +32,31 @@ pip install -r requirements.txt
 python3 back-end.py
 ```
 
-# Proxy server *optional
+## Proxy server *optional
 The proxy folder is not required. But in our case it is required to access the back-end.
 
-If it is needed, the files should be deployed on a device that has access to the back-end and steps 2-4 from the back-end section should be followed as well. Aditionally the ip address and port number of the back-end should be defined in the backend socket.
+1. If it is needed, the files should be deployed on a device that has access to the back-end and follow steps 2-3 from the back-end section.
 
+2. The ip address and port number of the back-end should be defined in the backend socket.
 
-# Front-end
-The front-end should be on a device that has access to a SLL certificate. The path to, and names of the certificates should be defined in server.js.
+3. Finally run the proxy file using the following command:
+```
+python3 proxy.py
+```
 
-If the back-end is accessable directly, the "target_ip" and "port" in server.js should point to the back-end directly. Else, the port number and ip should point to the proxy.
+## Front-end
+1. The front-end should be on a device that has access to a SLL certificate. The path to, and names of the certificates should be defined in server.js.
 
-In order to download all packages run the following command in the folder with "package.json".
+2. If the back-end is accessable directly, the "target_ip" and "port" in server.js should point to the back-end directly. Else, the port number and ip should point to the proxy.
+
+3. Now create and run a virtual environment, see steps 2 and 3 in the back-end section.
+
+4. Download all packages by running the following command in the folder with "package.json".
 ```
 npm install
+```
+
+5. Finally run start the web application using the command:
+```
+./run.sh
 ```
