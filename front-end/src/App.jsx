@@ -4,6 +4,8 @@ import { MdFullscreen, MdFullscreenExit } from "react-icons/md";
 import Webcam from "react-webcam";
 import Settings from "./Settings";
 import { diminishObject } from './DiminishObject';
+import { io } from 'socket.io-client';
+import { isIOS } from 'react-device-detect';
 import "./App.css";
 
 
@@ -11,17 +13,21 @@ function App() {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
+  const socketRef = useRef(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // For RTT testing.
+  const pendingRequests = useRef(new Map());
+  const rttArray = useRef([]);
+  const MAX_RTT_RECORDS = 1000; 
 
   // Settings values
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [diminishMethod, setDiminishMethod] = useState(0);   // 0 = Threshold, 1 = Dynamic
-  const [diminishEffect, setDiminishEffect] = useState(0);   // 0 = overlay, 1 = Blur, 2 = Desaturate
+  const [diminishEffect, setDiminishEffect] = useState(1);
   const [nutriScoreBaseline, setNutriScoreBaseline] = useState(0);
   const [useOutline, setUseOutline] = useState(0); // 0 = Off, 1 = Healthy, 2 = All
-  const [outlineColor, setOutlineColor] = useState('gray');
-
-  const API_URL = '/api/detect';
+  const [outlineColor, setOutlineColor] = useState('nutri-score_based');
 
   const settingsRef = useRef({
     diminishMethod,
@@ -32,68 +38,143 @@ function App() {
   });
 
   const detect = useCallback(async () => {
-    if (!webcamRef.current) return;
+    if (!webcamRef.current || !socketRef.current?.connected) return;
 
     try {
       const imageSrc = webcamRef.current.getScreenshot();
       if (!imageSrc) return;
 
-      // Create the blob from the screenshot.
-      const blob = await fetch(imageSrc).then(res => res.blob());
-      const formData = new FormData();
-      formData.append('image', blob, 'frame.jpg');
+      const requestId = Date.now() + Math.random();
+      const startTime = performance.now();
+      pendingRequests.current.set(requestId, startTime);
 
-      // Send the screenshot to the server.
-      const response = await fetch(API_URL, {
-        method: 'POST',
-        body: formData
+      // Send the screenshot through WebSocket
+      socketRef.current.emit('detect_frame', {
+        image: imageSrc,
+        requestId: requestId
       });
-
-      // Receive the response and diminish.
-      const detections = await response.json();
-      diminishObject(
-        canvasRef.current,
-        webcamRef.current.video,
-        detections,
-        settingsRef.current.diminishMethod,
-        settingsRef.current.diminishEffect,
-        settingsRef.current.nutriScoreBaseline,
-        settingsRef.current.useOutline,
-        settingsRef.current.outlineColor
-      );
 
     } catch (error) {
       console.error('Detection error:', error);
     }
   }, []);
 
+  // // Toggle fullscreen
+  // const toggleFullscreen = useCallback(() => {
+  //   // If not in fullscreen, enter Fullscreen.
+  //   if (!document.fullscreenElement) {
+  //     containerRef.current.requestFullscreen()
+  //       .then(() => setIsFullscreen(true))
+  //   } 
+  //   // Exit fullscreen if already in it.
+  //   else {
+  //     document.exitFullscreen()
+  //       .then(() => setIsFullscreen(false));
+  //   }
+  // }, []);
 
   // Toggle fullscreen
   const toggleFullscreen = useCallback(() => {
-    // If not in fullscreen, enter Fullscreen.
-    if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen()
-        .then(() => setIsFullscreen(true))
-        .catch(err => console.error('Fullscreen error:', err));
-    } 
-    // Exit fullscreen if already in it.
+    // Iphones fullscreen
+    if (isIOS) {
+      if (containerRef.current.webkitRequestFullscreen) {
+        containerRef.current.webkitRequestFullscreen();
+        setIsFullscreen(true);
+      }
+      else {
+        document.webkitExitFullscreen();
+        setIsFullscreen(false);
+      }
+    }
+    // Base fullscreen
     else {
-      document.exitFullscreen()
-        .then(() => setIsFullscreen(false));
+      if (!document.fullscreenElement) {
+        containerRef.current.requestFullscreen()
+          .then(() => setIsFullscreen(true))
+      } 
+      else {
+        document.exitFullscreen()
+          .then(() => setIsFullscreen(false));
+      }
     }
   }, []);
 
-
-  // Initialize canvas when video loads
-  const handleVideoLoad = () => {
+  const handleResize = () => {
     const video = webcamRef.current.video;
     const canvas = canvasRef.current;
+    
     if (video && canvas) {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      const videoRect = video.getBoundingClientRect();
+      canvas.width = videoRect.width;
+      canvas.height = videoRect.height;
     }
   };
 
+  // Initialize WebSocket connection
+  useEffect(() => {
+    // Connect to the WebSocket server through the proxy
+    socketRef.current = io('/', {
+      path: '/socket.io',
+      transports: ['websocket', 'polling']
+    });
+
+    socketRef.current.on('status', (data) => {
+      console.log('Server status:', data.msg);
+    });
+
+    socketRef.current.on('detection_result', (data) => {
+      const endTime = performance.now();
+      const requestId = data.requestId;
+
+      // Calculate RTT if we have the start time
+      if (requestId && pendingRequests.current.has(requestId)) {
+        const startTime = pendingRequests.current.get(requestId);
+        const RTT = endTime - startTime;
+        console.log(RTT);
+        pendingRequests.current.delete(requestId);
+
+        if (rttArray.current.length < MAX_RTT_RECORDS) {
+          console.log("push")
+          rttArray.current.push(RTT);
+        }
+        else {
+          console.log(rttArray);
+        }
+      }
+
+
+      // Process the detection results
+      if (canvasRef.current && webcamRef.current?.video) {
+        diminishObject(
+          canvasRef.current,
+          webcamRef.current.video,
+          data.detections,
+          settingsRef.current.diminishMethod,
+          settingsRef.current.diminishEffect,
+          settingsRef.current.nutriScoreBaseline,
+          settingsRef.current.useOutline,
+          settingsRef.current.outlineColor
+        );
+      }
+    });
+
+    socketRef.current.on('detection_error', (error) => {
+      console.error('Detection error:', error);
+    });
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+    };
+  }, []);
+
+  // Handle resize to keep canvas aligned with video
+  useEffect(() => {
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
   // Handle fullscreen.
   useEffect(() => {
     const fullscreenHandler = () => setIsFullscreen(!!document.fullscreenElement);
@@ -103,8 +184,8 @@ function App() {
 
   // Detect the objects on the screen every interval.
   useEffect(() => {
-    const interval = setInterval(detect, 200);
-    return () => clearInterval(interval);
+    const detectionInterval = setInterval(detect, 200);
+    return () => clearInterval(detectionInterval);
   }, []);
 
   // Update the ref when settings change.
@@ -132,9 +213,9 @@ function App() {
       <Webcam
         className="webcam-component"
         ref={webcamRef}
-        // width={screenDimentions.width}
-        // height={screenDimentions.height}
-        onLoadedMetadata={handleVideoLoad}
+        onLoadedMetadata={handleResize}
+        width={640}
+        height={640}
         screenshotFormat="image/jpeg"
         videoConstraints={{
           facingMode: "environment",
