@@ -10,7 +10,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'very_secret'
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 model = YOLO("yolov11l_640px.pt")
-model.to("cuda")
+# model.to("cuda")
 
 
 # Nutri-score convertion
