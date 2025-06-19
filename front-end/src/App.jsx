@@ -5,6 +5,7 @@ import Webcam from "react-webcam";
 import Settings from "./Settings";
 import { diminishObject } from './DiminishObject';
 import { io } from 'socket.io-client';
+import { isIOS } from 'react-device-detect';
 import "./App.css";
 
 
@@ -14,20 +15,19 @@ function App() {
   const containerRef = useRef(null);
   const socketRef = useRef(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [rtt, setRtt] = useState(0);
-  const pendingRequests = useRef(new Map());
 
+  // For RTT testing.
+  const pendingRequests = useRef(new Map());
   const rttArray = useRef([]);
   const MAX_RTT_RECORDS = 1000; 
-
 
   // Settings values
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [diminishMethod, setDiminishMethod] = useState(0);   // 0 = Threshold, 1 = Dynamic
-  const [diminishEffect, setDiminishEffect] = useState(0);   // 0 = overlay, 1 = Blur, 2 = Desaturate
+  const [diminishEffect, setDiminishEffect] = useState(1);
   const [nutriScoreBaseline, setNutriScoreBaseline] = useState(0);
   const [useOutline, setUseOutline] = useState(0); // 0 = Off, 1 = Healthy, 2 = All
-  const [outlineColor, setOutlineColor] = useState('gray');
+  const [outlineColor, setOutlineColor] = useState('nutri-score_based');
 
   const settingsRef = useRef({
     diminishMethod,
@@ -44,12 +44,11 @@ function App() {
       const imageSrc = webcamRef.current.getScreenshot();
       if (!imageSrc) return;
 
-      // Generate unique request ID and record start time
       const requestId = Date.now() + Math.random();
       const startTime = performance.now();
       pendingRequests.current.set(requestId, startTime);
 
-      // Send the base64 image data through WebSocket
+      // Send the screenshot through WebSocket
       socketRef.current.emit('detect_frame', {
         image: imageSrc,
         requestId: requestId
@@ -60,30 +59,54 @@ function App() {
     }
   }, []);
 
+  // // Toggle fullscreen
+  // const toggleFullscreen = useCallback(() => {
+  //   // If not in fullscreen, enter Fullscreen.
+  //   if (!document.fullscreenElement) {
+  //     containerRef.current.requestFullscreen()
+  //       .then(() => setIsFullscreen(true))
+  //   } 
+  //   // Exit fullscreen if already in it.
+  //   else {
+  //     document.exitFullscreen()
+  //       .then(() => setIsFullscreen(false));
+  //   }
+  // }, []);
 
   // Toggle fullscreen
   const toggleFullscreen = useCallback(() => {
-    // If not in fullscreen, enter Fullscreen.
-    if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen()
-        .then(() => setIsFullscreen(true))
-        .catch(err => console.error('Fullscreen error:', err));
-    } 
-    // Exit fullscreen if already in it.
+    // Iphones fullscreen
+    if (isIOS) {
+      if (containerRef.current.webkitRequestFullscreen) {
+        containerRef.current.webkitRequestFullscreen();
+        setIsFullscreen(true);
+      }
+      else {
+        document.webkitExitFullscreen();
+        setIsFullscreen(false);
+      }
+    }
+    // Base fullscreen
     else {
-      document.exitFullscreen()
-        .then(() => setIsFullscreen(false));
+      if (!document.fullscreenElement) {
+        containerRef.current.requestFullscreen()
+          .then(() => setIsFullscreen(true))
+      } 
+      else {
+        document.exitFullscreen()
+          .then(() => setIsFullscreen(false));
+      }
     }
   }, []);
 
-
-  // Initialize canvas when video loads
-  const handleVideoLoad = () => {
+  const handleResize = () => {
     const video = webcamRef.current.video;
     const canvas = canvasRef.current;
+    
     if (video && canvas) {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      const videoRect = video.getBoundingClientRect();
+      canvas.width = videoRect.width;
+      canvas.height = videoRect.height;
     }
   };
 
@@ -106,20 +129,19 @@ function App() {
       // Calculate RTT if we have the start time
       if (requestId && pendingRequests.current.has(requestId)) {
         const startTime = pendingRequests.current.get(requestId);
-        const currentRtt = endTime - startTime;
-        setRtt(currentRtt);
-        console.log(`RTT: ${currentRtt.toFixed(2)}ms`);
+        const RTT = endTime - startTime;
+        console.log(RTT);
         pendingRequests.current.delete(requestId);
 
-        // -------------- DIT IS OM DE RTT TE METEN -----------
-        // if (rttArray.current.length < MAX_RTT_RECORDS) {
-        //   console.log("push")
-        //   rttArray.current.push(currentRtt);
-        // }
-        // else {
-        //   console.log(rttArray);
-        // }
+        if (rttArray.current.length < MAX_RTT_RECORDS) {
+          console.log("push")
+          rttArray.current.push(RTT);
+        }
+        else {
+          console.log(rttArray);
+        }
       }
+
 
       // Process the detection results
       if (canvasRef.current && webcamRef.current?.video) {
@@ -147,6 +169,12 @@ function App() {
     };
   }, []);
 
+  // Handle resize to keep canvas aligned with video
+  useEffect(() => {
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
   // Handle fullscreen.
   useEffect(() => {
     const fullscreenHandler = () => setIsFullscreen(!!document.fullscreenElement);
@@ -156,8 +184,8 @@ function App() {
 
   // Detect the objects on the screen every interval.
   useEffect(() => {
-    const interval = setInterval(detect, 200);
-    return () => clearInterval(interval);
+    const detectionInterval = setInterval(detect, 200);
+    return () => clearInterval(detectionInterval);
   }, []);
 
   // Update the ref when settings change.
@@ -185,9 +213,9 @@ function App() {
       <Webcam
         className="webcam-component"
         ref={webcamRef}
-        // width={screenDimentions.width}
-        // height={screenDimentions.height}
-        onLoadedMetadata={handleVideoLoad}
+        onLoadedMetadata={handleResize}
+        width={640}
+        height={640}
         screenshotFormat="image/jpeg"
         videoConstraints={{
           facingMode: "environment",

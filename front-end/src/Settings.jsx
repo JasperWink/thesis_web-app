@@ -38,15 +38,15 @@ export default function SettingsPanel({ isOpen, onClose,
                 onChange={(e) => setDiminishEffect(Number(e.target.value))}
             >
                 <option value={0}>None</option>
-                <option value={1}>Overlay</option>
-                <option value={2}>Blur</option>
+                <option value={1}>Blur</option>
+                <option value={2}>Overlay</option>
                 <option value={3}>Desaturate</option>
             </select>
             </div>
 
             {/* ---------------- Nutri-score baseline ------------------- */}
             <div className="setting-option">
-            <label className="setting-label">Nutri-score baseline: </label>
+            <label className="setting-label">*Nutri-score baseline: </label>
             <select
                 className="setting-select"
                 value={nutriScoreBaseline} 
@@ -76,17 +76,22 @@ export default function SettingsPanel({ isOpen, onClose,
 
             {/* ---------------- Nutri-score baseline ------------------- */}
             <div className="setting-option">
-            <label className="setting-label">Outline color: </label>
+            <label className="setting-label">**Outline color: </label>
             <select
                 className="setting-select"
                 value={outlineColor} 
                 onChange={(e) => setOutlineColor(e.target.value)}
             >
+                <option value={'nutri-score_based'}>Nutri-score based</option>
                 <option value={'gray'}>Gray</option>
                 <option value={'green'}>Green</option>
                 <option value={'red'}>Red</option>
             </select>
             </div>
+        </div>
+        <div className="settings-footer">
+            <p>*Only used with Threshold diminsh method</p>
+            <p>**Only used with Outline on</p>
         </div>
     </div>
   );

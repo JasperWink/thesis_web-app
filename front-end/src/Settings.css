@@ -26,7 +26,8 @@
 }
 
 .settings-header h1 {
-    font-size: 4vh;
+  font-size: 4vh;
+  font-family: sans-serif;
 }
 
 .close-button {
@@ -38,18 +39,19 @@
 
 .settings-content {
   padding: 20px;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .setting-option {
   display: flex;
   align-items: center;
-  margin-bottom: 30px;
   width: 100%;
 }
 
 .setting-label {
   font-size: 4vh;
-  width: 50%;
+  width: 55%;
   margin: 20px;
   text-align: left;
   font-family: sans-serif;
@@ -57,11 +59,31 @@
 
 .setting-select {
   font-size: 4vh;
-  width: 50%;
+  width: 45%;
   padding: 10px 15px;
   border: 2px solid #ddd;
   border-radius: 10px;
   background-color: white;
   appearance: none;
   background-position: right 15px center;
+}
+
+.settings-footer {
+  position: relative;
+  height: 10%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+  border-top: 1px solid #eee;
+  box-sizing: border-box;
+}
+
+.settings-footer p {
+  margin: 5px 0;
+  font-size: 2vh;
+  text-align: center;
+  font-family: sans-serif;
 }
